@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlowBalance — Dense-Supervision-Motivated Trajectory Balance</title>
+  <meta name="description" content="FlowBalance improves FlowRL with outcome-calibrated dense privileged supervision and profiled trajectory balance over complete reasoning responses." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="assets/icons/book-mark.svg" />
+  <link rel="alternate" hreflang="en" href="index.html" />
+  <link rel="alternate" hreflang="zh-CN" href="zh.html" />
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:true,tags:"none"},svg:{fontCache:"global"},options:{skipHtmlTags:["script","noscript","style","textarea","pre","code"]}};
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#top">FlowBalance</a>
+      <nav class="topnav" aria-label="Article links">
+        <a href="#motivation">Motivation</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#balance">Trajectory balance</a>
+        <a href="#results">Experiments</a>
+        <a href="#diversity">Diversity</a>
+        <a class="topnav__pill" href="#cite">Cite</a>
+        <div class="lang-switch" role="group" aria-label="Language">
+          <a class="active" href="index.html" lang="en" aria-current="page">EN</a>
+          <a href="zh.html" lang="zh-CN">中文</a>
+        </div>
+        <button id="theme-toggle" class="theme" aria-label="Toggle dark mode">
+          <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+          <svg class="moon" viewBox="0 0 24 24"><path d="M20 15a8 8 0 1 1-11-11 7 7 0 0 0 11 11Z"/></svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <span id="top"></span>
+  <div class="page">
+    <aside class="toc" aria-label="Contents">
+      <p>Contents</p>
+      <nav>
+        <a href="#motivation">Motivation</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#balance">Trajectory balance</a>
+        <a href="#gate">When to trust the teacher</a>
+        <a href="#results">Experiments</a>
+        <a href="#diversity">Diversity analysis</a>
+      </nav>
+    </aside>
+
+    <main class="article">
+      <section class="hero">
+        <p class="eyebrow">FlowBalance · Tencent HY LLM Frontier · August 2026</p>
+        <h1>FlowBalance: Dense-Supervision-Motivated Trajectory Balance</h1>
+        <p class="hero__tagline">Dense reasoning feedback, calibrated by verified outcomes.</p>
+        <p class="hero__lead">
+          FlowBalance starts from FlowRL's distributional view of reasoning and adds dense privileged supervision without introducing a separate imitation loss. Verifier advantages determine the outcome direction; a frozen self-teacher refines each sampled trajectory; and profiled trajectory balance learns the resulting reference-supported distribution over complete responses.
+        </p>
+
+        <div class="hero-actions" aria-label="Project links">
+          <a class="hero-action hero-action--primary" href="https://github.com/alexhuang13/FlowBalance" target="_blank" rel="noopener">GitHub</a>
+          <a class="hero-action" href="#methodology">Read the method</a>
+          <a class="hero-action" href="#results">See results</a>
+        </div>
+
+        <div class="byline">
+          <p class="authors">Zixun Huang<sup>*1,2</sup>, Kishan Panaganti<sup>*†1</sup>, Haitao Mi<sup>1</sup>, Leowei Liang<sup>1</sup></p>
+          <p><sup>1</sup>Tencent HY LLM Frontier &nbsp;&nbsp; <sup>2</sup>University of Pennsylvania</p>
+          <p><sup>*</sup>Equal contribution, &nbsp;<sup>†</sup>Project lead</p>
+        </div>
+
+        <div class="motivation-intro" id="motivation">
+          <p class="section__label">Part 01</p>
+          <h2>Motivation</h2>
+          <p>Given a problem $x$, a reasoning policy generates a complete response $y=(y_1,\ldots,y_T)\sim\pi_\theta(\cdot\mid x)$. A verifier returns an outcome $r(x,y)$—for example, whether the final answer is correct. The successful set</p>
+          <div class="equation-card equation-card--plain motivation-equation">
+            $$\mathcal Y^+(x)=\{y:r(x,y)=1\}$$
+          </div>
+          <p>usually contains more than one trajectory. Two responses can reach the same correct answer through different representations, intermediate arguments, or solution strategies. Therefore, improving a reasoning model is not only about increasing $\Pr_{y\sim\pi_\theta}[r(x,y)=1]$; it is also about deciding how probability should be allocated <em>within</em> $\mathcal Y^+(x)$.</p>
+
+          <div class="motivation-visual">
+            <div class="motivation-visual__story" aria-label="Motivation narrative">
+              <article>
+                <span>Sparse outcome signal</span>
+                <b>RLVR knows whether a response succeeds</b>
+                <p>A verifier supplies reliable correctness, but one terminal reward cannot identify which reasoning decisions made a long trajectory useful or misleading.</p>
+              </article>
+              <article class="motivation-visual__negative">
+                <span>Dense but unsafe signal</span>
+                <b>Privileged imitation can conflict with the outcome</b>
+                <p>A solution-conditioned self-teacher can confidently support a plausible failure, suppress exploration, or collapse responses toward shorter traces.</p>
+              </article>
+              <article class="motivation-visual__opportunity">
+                <span>FlowBalance</span>
+                <b>Let the verifier calibrate dense shaping</b>
+                <p>Combine outcome advantage and token-level teacher evidence into one trajectory energy, then normalize it into a distribution over complete responses.</p>
+              </article>
+            </div>
+
+            <figure class="motivation-figure paper-overview-inline">
+              <a class="motivation-figure__link" href="figures/paper/overview.pdf" target="_blank" rel="noopener">
+                <img src="figures/overview.png" alt="FlowBalance reweights reference-supported successful and failed reasoning modes using verifier advantages and sign-gated privileged-teacher gains." />
+              </a>
+              <figcaption><b>Distributional reweighting.</b> Teacher support reinforces positive-advantage trajectories and is reversed on negative-advantage trajectories, increasing mass on successful modes while retaining multiple valid solutions.</figcaption>
+            </figure>
+          </div>
+
+          <h3 class="subhead">Why sparse RL and local distillation are not enough</h3>
+          <p>Outcome-only RL provides direction but little information along a trajectory. Local distillation provides dense information but does not guarantee agreement with verified correctness. Adding the two as separate losses still leaves their conflict unresolved: it does not specify the normalized complete-response distribution that the policy should learn.</p>
+          <p>FlowBalance resolves the conflict at the target-design level. <strong>The verifier determines whether teacher support should reinforce or suppress a trajectory.</strong> The resulting composite energy tilts a fixed reference policy, while a shared partition value converts relative preferences into a normalized distribution for each rollout group.</p>
+
+          <aside class="story-callout motivation-transition"><b>From motivation to method.</b> FlowBalance changes one component of FlowRL—the trajectory energy. It augments sparse verifier advantage with a sign-gated dense teacher gain, while retaining complete-response trajectory balance.</aside>
+        </div>
+
+      </section>
+
+      <section class="section" id="methodology">
+        <p class="section__label">Part 02</p>
+        <h2>Methodology</h2>
+        <p>FlowBalance starts from FlowRL and changes its response energy. For each on-policy rollout group, the verifier produces a stopped group-relative advantage $A_i$. A frozen copy of the rollout model then receives privileged context—such as a reference solution—and rescores every sampled token. The clipped average log-probability gain over the reference becomes the trajectory-level signal $G_T(y_i)$.</p>
+
+        <div class="flow-round" aria-label="One FlowBalance training round">
+          <article><span>1</span><b>Sample</b><p>Generate a group of complete responses without privileged context.</p></article>
+          <svg viewBox="0 0 54 24" aria-hidden="true"><path d="M2 12h45m-7-7 7 7-7 7"/></svg>
+          <article><span>2</span><b>Evaluate</b><p>Use the verifier for outcomes and the privileged teacher for dense trajectory scores.</p></article>
+          <svg viewBox="0 0 54 24" aria-hidden="true"><path d="M2 12h45m-7-7 7 7-7 7"/></svg>
+          <article><span>3</span><b>Reweight</b><p>Convert both signals into one normalized target over the sampled answers.</p></article>
+        </div>
+
+        <p class="bridge-copy">The resulting energy does not update the policy by itself. It first defines how much relative mass each complete response should receive:</p>
+
+        <div class="equation-card">
+          <span>The target distribution</span>
+          $$p_i^\star=
+          \frac{\pi_{\mathrm{ref}}(y_i\mid x)\exp(E_i/\tau)}
+          {\sum_j\pi_{\mathrm{ref}}(y_j\mid x)\exp(E_j/\tau)},
+          \qquad
+          E_i=\eta_AA_i+\beta_TG_T(y_i)\operatorname{sign}(A_i).$$
+        </div>
+
+        <div class="term-grid">
+          <article><span>Anchor</span><h3>$\pi_{\mathrm{ref}}$</h3><p>Preserves support from the initial model instead of imitating the teacher without constraint.</p></article>
+          <article><span>Outcome</span><h3>$A_i$</h3><p>Separates responses using verifier-derived, group-relative correctness.</p></article>
+          <article><span>Reasoning</span><h3>$G_T(y_i)$</h3><p>Summarizes dense privileged feedback over the complete sampled trajectory.</p></article>
+          <article><span>Normalization</span><h3>$Z_{\mathcal G}$</h3><p>Turns relative preferences into a probability distribution for the prompt.</p></article>
+        </div>
+
+        <aside class="story-callout"><b>What FlowBalance adds to FlowRL.</b> FlowRL contributes the sparse verifier-based trajectory energy. FlowBalance adds dense privileged evidence, but sign-gates it with the verifier and realizes it through the same normalized complete-response objective—not as a separate token-imitation loss.</aside>
+
+        <details class="inline-theory">
+          <summary><span>Distributional property</span><b>FlowBalance is the smallest reference shift that reaches its energy level.</b><i>+</i></summary>
+          <div>
+            <p>Let $p_i^\star\propto\pi_{\mathrm{ref}}(y_i)e^{E_i/\tau}$ on the realized rollout group. For every group distribution $p$,</p>
+            $$\mathrm{KL}(p\|\pi_{\mathrm{ref}})=\mathrm{KL}(p^\star\|\pi_{\mathrm{ref}})+\mathrm{KL}(p\|p^\star)+\frac{\mathbb E_p[E]-\mathbb E_{p^\star}[E]}{\tau}.$$
+            <p>Among distributions attaining at least the target's expected energy, $p^\star$ uniquely minimizes reverse KL to the reference.</p>
+          </div>
+        </details>
+      </section>
+
+
+      <section class="section" id="balance">
+        <p class="section__label">Part 03</p>
+        <h2>Trajectory Balance</h2>
+        <p>FlowBalance has already defined the desired distribution over complete responses. Trajectory balance turns that distribution into a trainable condition: if the student matches the target, then every sampled response $y_i$ must satisfy</p>
+
+        <div class="tb-equation tb-equation--target">
+          <span>Target condition</span>
+          $$\pi_\theta(y_i\mid x)
+          =\frac{1}{Z_{\mathcal G}(x,c)}
+          \pi_{\mathrm{ref}}(y_i\mid x)
+          \exp\!\left(\frac{E_i}{\tau}\right).$$
+        </div>
+
+        <p>Taking logs and moving all terms to one side gives the trajectory-balance residual:</p>
+
+        <div class="tb-equation">
+          <span>Trajectory-balance residual</span>
+          $$\Delta_i
+          =\tau\log Z_{\mathcal G}
+          +\tau\log\frac{\pi_\theta(y_i\mid x)}{\pi_{\mathrm{ref}}(y_i\mid x)}
+          -E_i.$$
+        </div>
+
+        <p>FlowBalance minimizes the squared residual across the rollout group:</p>
+
+        <div class="tb-equation tb-equation--loss">
+          <span>FlowBalance objective</span>
+          $$\mathcal L_{\mathrm{FlowBalance}}
+          =\frac{1}{2N}\sum_{i=1}^{N}\Delta_i^2.$$
+        </div>
+
+        <div class="tb-logic">
+          <article><span>01</span><div><b>Complete-response supervision</b><p>The gradient flows through the sum of student token log-probabilities, but the balance condition is imposed on the probability of the full response.</p></div></article>
+          <article><span>02</span><div><b>One partition per rollout group</b><p>All responses to the same prompt share $Z_{\mathcal G}$. It converts trajectory energies into a normalized distribution rather than independent scores.</p></div></article>
+          <article><span>03</span><div><b>Profile the unknown normalizer</b><p>Each response implies a value of $\log Z$; FlowBalance uses their group mean and stops gradients through this estimate.</p></div></article>
+        </div>
+
+        <div class="tb-partition">
+          <span>Group partition estimate</span>
+          $$\widehat{\log Z}_{\mathcal G}
+          =\frac{1}{N}\sum_{i=1}^{N}
+          \left[
+          \frac{E_i}{\tau}
+          -\log\frac{\pi_\theta(y_i\mid x)}{\pi_{\mathrm{ref}}(y_i\mid x)}
+          \right].$$
+        </div>
+
+        <details class="inline-theory" open>
+          <summary><span>Contrast preservation</span><b>Profiling one scalar $Z$ preserves every pairwise response preference.</b><i>−</i></summary>
+          <div>
+            <p>At zero profiled trajectory-balance loss, for every $i,j$ with positive reference support,</p>
+            $$\frac{\pi_\theta(y_i\mid x)}{\pi_\theta(y_j\mid x)}
+            =\frac{\pi_{\mathrm{ref}}(y_i\mid x)}{\pi_{\mathrm{ref}}(y_j\mid x)}
+            \exp\!\left(\frac{E_i-E_j}{\tau}\right).$$
+            <p>The shared partition cancels in the ratio. It removes one common group offset while preserving all $N-1$ relative-probability directions.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="section" id="gate">
+        <p class="section__label">Part 04</p>
+        <h2>When should FlowBalance trust the privileged teacher?</h2>
+        <p>Privileged likelihood and verifier correctness are different signals. A teacher may assign positive gain to a coherent-looking response that the verifier rejects. FlowBalance therefore uses the sign of $A_i$ as a gate: teacher gain raises the energy of positive-advantage responses, lowers the energy of negative-advantage responses, and vanishes when $A_i=0$.</p>
+
+        <div class="gate-rule">
+          <article class="gate-rule__good">
+            <span>$A_i&gt;0$</span>
+            <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="22"/><path d="m18 28 7 7 14-16"/></svg>
+            <h3>Verified</h3>
+            <p>Follow teacher support.</p>
+          </article>
+          <div class="gate-rule__verb">sign gate</div>
+          <article class="gate-rule__bad">
+            <span>$A_i&lt;0$</span>
+            <svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="22"/><path d="m20 20 16 16M36 20 20 36"/></svg>
+            <h3>Rejected</h3>
+            <p>Reverse teacher pressure.</p>
+          </article>
+        </div>
+
+        <h3 class="subhead">Move the weights and watch the distribution respond</h3>
+        <p>This toy rollout group contains two verified answers and two rejected answers. Each starts with reference probability $\pi_{\mathrm{ref}}(y_i)$ and receives the FlowBalance energy</p>
+
+        <div class="mass-explainer">
+          <div class="mass-explainer__formula">
+            $$p_i^\star\propto\pi_{\mathrm{ref}}(y_i)
+            \exp\!\left(\eta_AA_i+\beta_TG_T(y_i)\operatorname{sign}(A_i)\right),$$
+          </div>
+          <div class="mass-explainer__guide">
+            <p><b>Verifier weight $\eta_A$</b><span>moves mass from rejected answers toward verified answers.</span></p>
+            <p><b>Teacher weight $\beta_T$</b><span>changes relative preference using privileged reasoning feedback.</span></p>
+          </div>
+        </div>
+
+        <aside class="experiment-prompt"><b>Watch “Plausible failure.”</b> The verifier rejects it, but the teacher gives it a strong positive gain $(+0.7)$. Turn off the sign gate and raise the teacher weight; then turn the gate back on to see how FlowBalance redirects that support.</aside>
+
+        <div class="mass-lab" id="mass-lab">
+          <div class="mass-lab__controls">
+            <label><span>Verifier weight <b id="eta-value">2.0</b></span><input id="eta-slider" type="range" min="0" max="4" step="0.1" value="2" /></label>
+            <label><span>Teacher weight <b id="beta-value">1.0</b></span><input id="beta-slider" type="range" min="0" max="3" step="0.1" value="1" /></label>
+            <label class="switch"><input id="gate-toggle" type="checkbox" checked /><i></i><b>Sign gate</b></label>
+          </div>
+          <div class="mass-bars" aria-live="polite">
+            <div class="mass-row" data-ref="0.30" data-a="1" data-g="0.8"><div><b>Geometry</b><small>verified · teacher +0.8</small></div><span><i></i></span><output></output></div>
+            <div class="mass-row" data-ref="0.20" data-a="1" data-g="0.3"><div><b>Algebra</b><small>verified · teacher +0.3</small></div><span><i></i></span><output></output></div>
+            <div class="mass-row mass-row--bad" data-ref="0.25" data-a="-1" data-g="0.7"><div><b>Plausible failure</b><small>rejected · teacher +0.7</small></div><span><i></i></span><output></output></div>
+            <div class="mass-row mass-row--bad" data-ref="0.25" data-a="-1" data-g="-0.2"><div><b>Weak failure</b><small>rejected · teacher −0.2</small></div><span><i></i></span><output></output></div>
+          </div>
+          <p id="gate-readout" class="mass-readout"></p>
+        </div>
+
+        <details class="inline-theory">
+          <summary><span>Sign-gating guarantee</span><b>Teacher support on a rejected response becomes a correction favoring the verified response.</b><i>+</i></summary>
+          <div>
+            <p>Consider a verified response $y_+$ and a verifier-rejected response $y_-$ in the same mixed-outcome rollout group. Compared with otherwise identical ungated teacher shaping, sign gating changes their target probability ratio by</p>
+            $$\frac{p^\star_{\mathrm{gated}}(y_+)}{p^\star_{\mathrm{gated}}(y_-)}
+            =\frac{p^\star_{\mathrm{ungated}}(y_+)}{p^\star_{\mathrm{ungated}}(y_-)}
+            \exp\!\left(\frac{2\beta_TG_T(y_-\mid x,c)}{\tau}\right).$$
+            <p>Thus, when the privileged teacher assigns positive gain to a rejected response, the gate converts that support from imitation pressure into a success-to-failure probability-ratio gain.</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="section" id="results">
+        <p class="section__label">Part 05</p>
+        <h2>Experiments</h2>
+        <p>Across five mathematical reasoning benchmarks, FlowBalance achieves the strongest average on both Qwen3-4B and Qwen3-8B. It improves over outcome-only FlowRL by 1.04 and 1.76 points, respectively, while also training faster and more stably than GRPO and avoiding direct OPSD's response-length collapse.</p>
+
+        <div class="paper-results paper-results--three">
+          <figure>
+            <a href="figures/paper/training_acceleration.pdf" target="_blank" rel="noopener"><img src="figures/training_acceleration.png" alt="FlowBalance reaches 0.5 AIME24 validation accuracy faster than GRPO." /></a>
+            <figcaption><b>Training acceleration.</b> FlowBalance reaches 0.5 AIME24 validation accuracy in about 100 steps, versus roughly 143 for GRPO—a 1.43× speedup.</figcaption>
+          </figure>
+          <figure>
+            <a href="figures/paper/training_dynamics.pdf" target="_blank" rel="noopener"><img src="figures/training_dynamics.png" alt="FlowBalance remains stable over 400 training steps while GRPO degrades after approximately step 180." /></a>
+            <figcaption><b>Training stability.</b> FlowBalance stays near peak performance through 400 steps, whereas GRPO degrades sharply after approximately step 180.</figcaption>
+          </figure>
+          <figure>
+            <a href="figures/paper/response_length.pdf" target="_blank" rel="noopener"><img src="figures/response_length.png" alt="FlowBalance maintains longer reasoning responses than direct OPSD." /></a>
+            <figcaption><b>Response length.</b> FlowBalance maintains long reasoning trajectories while direct OPSD rapidly collapses toward shorter responses.</figcaption>
+          </figure>
+        </div>
+
+        <div class="result-highlights">
+          <article><span>Qwen3-4B</span><b>64.26</b><p>Best five-benchmark average; +1.04 over FlowRL.</p></article>
+          <article><span>Qwen3-8B</span><b>67.61</b><p>Best on every reported benchmark; +1.76 over FlowRL.</p></article>
+          <article><span>AIME24 speed</span><b>1.43×</b><p>About 100 steps to 0.5 validation accuracy versus 143 for GRPO.</p></article>
+        </div>
+
+        <div class="benchmark-details">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th class="col-model">Model</th><th class="col-method">Method</th><th>AIME24@16</th><th>HMMT25@1</th><th>Minerva@1</th><th>MATH500@1</th><th>Olympiad@1</th><th>Avg.</th></tr></thead>
+              <tbody>
+                <tr><td class="col-model" rowspan="5">Qwen3-4B</td><td class="col-method">GRPO</td><td>78.00</td><td>26.67</td><td>51.18</td><td>92.04</td><td>63.68</td><td>62.31</td></tr>
+                <tr><td class="col-method">OPSD</td><td>65.33</td><td>14.67</td><td>47.28</td><td>87.56</td><td>55.76</td><td>54.12</td></tr>
+                <tr><td class="col-method">RLSD</td><td>73.33</td><td>21.33</td><td>50.29</td><td>91.44</td><td>61.36</td><td>59.55</td></tr>
+                <tr><td class="col-method">FlowRL</td><td>75.33</td><td>30.67</td><td><strong>51.99</strong></td><td>92.84</td><td>65.25</td><td>63.22</td></tr>
+                <tr class="ours"><td class="col-method">FlowBalance</td><td><strong>80.00</strong></td><td><strong>32.00</strong></td><td>50.51</td><td><strong>93.28</strong></td><td><strong>65.49</strong></td><td><strong>64.26</strong></td></tr>
+                <tr><td class="col-model" rowspan="5">Qwen3-8B</td><td class="col-method">GRPO</td><td>85.33</td><td>31.33</td><td>52.87</td><td>93.16</td><td>64.78</td><td>65.49</td></tr>
+                <tr><td class="col-method">OPSD</td><td>48.67</td><td>4.00</td><td>38.46</td><td>74.56</td><td>40.09</td><td>41.16</td></tr>
+                <tr><td class="col-method">RLSD</td><td>82.67</td><td>28.00</td><td>52.94</td><td>93.44</td><td>63.56</td><td>64.12</td></tr>
+                <tr><td class="col-method">FlowRL</td><td>86.67</td><td>30.67</td><td>52.79</td><td>92.92</td><td>66.20</td><td>65.85</td></tr>
+                <tr class="ours"><td class="col-method">FlowBalance</td><td><strong>89.33</strong></td><td><strong>34.67</strong></td><td><strong>53.68</strong></td><td><strong>93.52</strong></td><td><strong>66.85</strong></td><td><strong>67.61</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="section" id="diversity">
+        <p class="section__label">Part 06</p>
+        <h2>Diversity Analysis</h2>
+        <p>We use GPT-5.5 to extract the core mathematical representation and tools from each full AIME24 trajectory, then cluster anonymized summaries by semantic strategy rather than wording or response length. Correctness is revealed only after clustering, and diversity is computed on correct trajectories using</p>
+
+        <div class="diversity-formula">
+          <span class="definition-label">Simpson Diversity</span>
+          $$D_{\mathrm{Simpson}}=1-\sum_{k=1}^{K}p_k^2,$$
+          <p>where $p_k$ is the fraction of correct trajectories in cluster $k$; equivalently, $D_{\mathrm{Simpson}}$ is the probability that two sampled correct trajectories use different strategies.</p>
+        </div>
+
+        <figure class="diversity-paper-figure">
+          <a href="figures/paper/diversity.pdf" target="_blank" rel="noopener">
+            <img src="figures/diversity.png" alt="Paper figure comparing correct-only Simpson strategy diversity on AIME24." />
+          </a>
+          <figcaption><b>Correct-strategy diversity.</b> FlowBalance achieves 0.2194, compared with 0.1017 for GRPO and 0.1456 for RLSD.</figcaption>
+        </figure>
+
+        <h3 class="subhead">Case study: the same answer through a different mathematical object</h3>
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 Problem 23.</b> A tetrahedron has opposite edge pairs $\sqrt{41}$, $\sqrt{80}$, and $\sqrt{89}$; compute its inradius expression.</p>
+          <div class="case-study__routes">
+            <article>
+              <span>Common GRPO route</span>
+              <h3>Cayley–Menger determinant</h3>
+              <p>Treat the tetrahedron through its six pairwise distances, build the distance matrix, exploit symmetry, and recover the volume from a distance invariant.</p>
+              <div><i>distance geometry</i><i>determinant</i><i>symmetry</i></div>
+            </article>
+            <div class="case-study__vs">versus</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance route</span>
+              <h3>Hidden rectangular-box embedding</h3>
+              <p>Recognize $41=4^2+5^2$, $80=4^2+8^2$, and $89=5^2+8^2$; embed the vertices in a $4\times5\times8$ box and compute volume with a scalar triple product.</p>
+              <div><i>coordinate embedding</i><i>Pythagorean structure</i><i>triple product</i></div>
+            </article>
+          </div>
+          <p class="case-study__point">Both trajectories are correct; the distinct determinant and box-embedding routes illustrate FlowBalance's greater diversity among successful strategies.</p>
+        </div>
+
+      </section>
+
+      <footer id="cite">
+        <h3>Cite this work</h3>
+        <div class="bibtex"><button id="copy-bib">Copy</button><pre id="bibtex-block">@misc{huang2026flowbalance,
+  title  = {FlowBalance: A Dense-Supervision-Motivated Trajectory Balance Method for LLM Reasoning},
+  author = {Zixun Huang and Kishan Panaganti and Haitao Mi and Leowei Liang},
+  year   = {2026}
+}</pre></div>
+      </footer>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
