@@ -631,7 +631,6 @@ html[lang="zh-CN"] figcaption { font-family: "Inter", "PingFang SC", "Microsoft 
 .result-highlights article { padding:18px; border:1px solid var(--line); border-radius:8px; background:var(--surface); }
 .result-highlights span { display:block; font:700 11px var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--blue-ink); }
 .result-highlights b { display:block; margin:7px 0 4px; font:600 29px/1 var(--serif); color:var(--ink); }
-.result-highlights b.delta-pair { font:600 23px/1.08 var(--sans); letter-spacing:-.035em; }
 .result-highlights p { margin:0; font:12.5px/1.5 var(--sans); color:var(--muted); }
 @media(max-width:900px){ .paper-results.paper-results--three { grid-template-columns:1fr 1fr; } .paper-results.paper-results--three figure:last-child { grid-column:1/-1; width:50%; justify-self:center; } }
 @media(max-width:760px){ .paper-results.paper-results--three,.result-highlights { grid-template-columns:1fr; } .paper-results.paper-results--three figure:last-child { grid-column:auto; width:auto; } }

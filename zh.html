@@ -278,7 +278,7 @@
       <section class="section" id="results">
         <p class="section__label">第五部分</p>
         <h2>实验</h2>
-        <p>在 Qwen3-4B 和 Qwen3-8B 上，FlowBalance 都取得了最高的五项基准平均分。Qwen3-4B 的平均分为 64.26，分别比 <strong>GRPO 高 1.95 分</strong>、比 <strong>OPSD 高 10.14 分</strong>；Qwen3-8B 的平均分为 67.61，分别高出 <strong>2.12 分</strong>和 <strong>26.45 分</strong>。训练曲线还显示，FlowBalance 比 GRPO 收敛更快、更稳定，并避免了直接 OPSD 的回答长度塌缩。</p>
+        <p>在 Qwen3-4B 和 Qwen3-8B 上，FlowBalance 都取得了最高的五项基准平均分。Qwen3-4B 的平均分为 64.26，比 <strong>GRPO 高 1.95 分</strong>；Qwen3-8B 的平均分为 67.61，比 <strong>GRPO 高 2.12 分</strong>。训练曲线还显示，FlowBalance 比 GRPO 收敛更快、更稳定，并避免了直接 OPSD 的回答长度塌缩。</p>
 
         <div class="paper-results paper-results--three">
           <figure><a href="figures/paper/training_acceleration.pdf" target="_blank" rel="noopener"><img src="figures/training_acceleration.png" alt="FlowBalance 比 GRPO 更快达到 0.5 的 AIME24 验证准确率。" /></a><figcaption><b>训练加速。</b> FlowBalance 约 100 步达到 0.5，GRPO 约需 143 步，速度提升 1.43×。</figcaption></figure>
@@ -286,8 +286,8 @@
           <figure><a href="figures/paper/response_length.pdf" target="_blank" rel="noopener"><img src="figures/response_length.png" alt="FlowBalance 比直接 OPSD 保持更长的推理回答。" /></a><figcaption><b>回答长度。</b> FlowBalance 保持较长推理轨迹，而直接 OPSD 很快塌缩为短回答。</figcaption></figure>
         </div>
         <div class="result-highlights">
-          <article><span>Qwen3-4B · 提升</span><b class="delta-pair">+1.95 · +10.14</b><p>相对 GRPO · OPSD 的五基准平均分提升（总平均分 64.26）。</p></article>
-          <article><span>Qwen3-8B · 提升</span><b class="delta-pair">+2.12 · +26.45</b><p>相对 GRPO · OPSD 的五基准平均分提升（总平均分 67.61）。</p></article>
+          <article><span>Qwen3-4B · 提升</span><b>+1.95</b><p>相对 GRPO 的五基准平均分提升（总平均分 64.26）。</p></article>
+          <article><span>Qwen3-8B · 提升</span><b>+2.12</b><p>相对 GRPO 的五基准平均分提升（总平均分 67.61）。</p></article>
           <article><span>AIME24 速度</span><b>1.43×</b><p>约 100 步达到 0.5 验证准确率，GRPO 约需 143 步。</p></article>
         </div>
         <div class="benchmark-details">
