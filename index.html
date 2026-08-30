@@ -107,9 +107,9 @@
 
             <figure class="motivation-figure paper-overview-inline">
               <a class="motivation-figure__link" href="figures/paper/overview.pdf" target="_blank" rel="noopener">
-                <img src="figures/overview.png" alt="FlowBalance reweights reference-supported successful and failed reasoning modes using verifier advantages and sign-gated privileged-teacher gains." />
+                <img src="figures/overview.png" alt="Five-stage FlowBalance self-improvement cycle from on-policy generation and outcome verification to privileged self-guidance, sign gating, and trajectory-balance learning." />
               </a>
-              <figcaption><b>Distributional reweighting.</b> Teacher support reinforces positive-advantage trajectories and is reversed on negative-advantage trajectories, increasing mass on successful modes while retaining multiple valid solutions.</figcaption>
+              <figcaption><b>FlowBalance self-improvement cycle.</b> On-policy experience is verified, reassessed by a frozen privileged view, grounded through sign gating, and internalized as a normalized complete-response distribution through profiled trajectory balance.</figcaption>
             </figure>
           </div>
 
@@ -292,7 +292,7 @@
       <section class="section" id="results">
         <p class="section__label">Part 05</p>
         <h2>Experiments</h2>
-        <p>Across five mathematical reasoning benchmarks, FlowBalance achieves the strongest average on both Qwen3-4B and Qwen3-8B. It improves over outcome-only FlowRL by 1.04 and 1.76 points, respectively, while also training faster and more stably than GRPO and avoiding direct OPSD's response-length collapse.</p>
+        <p>Across five mathematical reasoning benchmarks, FlowBalance achieves the strongest average on both Qwen3-4B and Qwen3-8B. On Qwen3-4B, its 64.26 average is <strong>+1.95 points over GRPO</strong> and <strong>+10.14 over OPSD</strong>; on Qwen3-8B, its 67.61 average is <strong>+2.12 over GRPO</strong> and <strong>+26.45 over OPSD</strong>. It also trains faster and more stably than GRPO while avoiding direct OPSD's response-length collapse.</p>
 
         <div class="paper-results paper-results--three">
           <figure>
@@ -310,8 +310,8 @@
         </div>
 
         <div class="result-highlights">
-          <article><span>Qwen3-4B</span><b>64.26</b><p>Best five-benchmark average; +1.04 over FlowRL.</p></article>
-          <article><span>Qwen3-8B</span><b>67.61</b><p>Best on every reported benchmark; +1.76 over FlowRL.</p></article>
+          <article><span>Qwen3-4B · gains</span><b class="delta-pair">+1.95 · +10.14</b><p>Over GRPO · OPSD on the five-benchmark average (64.26 overall).</p></article>
+          <article><span>Qwen3-8B · gains</span><b class="delta-pair">+2.12 · +26.45</b><p>Over GRPO · OPSD on the five-benchmark average (67.61 overall).</p></article>
           <article><span>AIME24 speed</span><b>1.43×</b><p>About 100 steps to 0.5 validation accuracy versus 143 for GRPO.</p></article>
         </div>
 
@@ -355,6 +355,8 @@
           <figcaption><b>Correct-strategy diversity.</b> FlowBalance achieves 0.2194, compared with 0.1017 for GRPO and 0.1456 for RLSD.</figcaption>
         </figure>
 
+        <p class="case-intro">The aggregate score tells us that FlowBalance samples more varied correct strategies; the traces below show what that means mathematically. The boxed paper examples are summarized by the representation and criterion that actually drive each derivation.</p>
+
         <h3 class="subhead">Case study: the same answer through a different mathematical object</h3>
         <div class="case-study">
           <p class="case-study__problem"><b>AIME24 Problem 23.</b> A tetrahedron has opposite edge pairs $\sqrt{41}$, $\sqrt{80}$, and $\sqrt{89}$; compute its inradius expression.</p>
@@ -373,8 +375,73 @@
               <div><i>coordinate embedding</i><i>Pythagorean structure</i><i>triple product</i></div>
             </article>
           </div>
-          <p class="case-study__point">Both trajectories are correct; the distinct determinant and box-embedding routes illustrate FlowBalance's greater diversity among successful strategies.</p>
+          <p class="case-study__point"><b>Result.</b> Both routes obtain face area $24\sqrt{21}$, volume $160/3$, inradius $20\sqrt{21}/63$, and final answer $104$. The difference is structural: one treats the tetrahedron as six distances, while the other discovers a coordinate object that makes those distances immediate.</p>
         </div>
+
+        <h3 class="subhead">Three additional FlowBalance cases</h3>
+        <p class="case-intro">These examples come from the same seed-0, step-180, 16-sample AIME24 run. In every pair, the final answer agrees but the central mathematical object changes.</p>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 Problem 5.</b> A unit-length segment joins the positive coordinate axes. Find the unique interior point of a specified segment that lies on no other segment in this family, then compute $OC^2$.</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance route 1</span>
+              <h3>Envelope and astroid</h3>
+              <p>Write the unit-intercept family as $F(x,y,u)=x/u+y/\sqrt{1-u^2}-1$. Solving $F=F_u=0$ produces the envelope $x^{2/3}+y^{2/3}=1$; the given segment corresponds to $u=1/2$.</p>
+              <div><i>line envelope</i><i>astroid</i><i>global geometry</i></div>
+            </article>
+            <div class="case-study__vs">versus</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance route 2</span>
+              <h3>Multiple-root uniqueness</h3>
+              <p>Parameterize a point on the segment and require the known line to be a double root of the one-variable trigonometric incidence equation. The derivative condition gives $t=3/4$ directly.</p>
+              <div><i>multiplicity</i><i>local criterion</i><i>trigonometry</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>Result.</b> Both routes locate $C=(1/8,3\sqrt3/8)$, so $OC^2=7/16$ and the answer is $23$. One uses the global envelope of the whole line family; the other detects uniqueness locally through a repeated root.</p>
+        </div>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 Problem 15.</b> A radius-11 sphere is tangent to a torus generated by rotating a radius-3 circle whose center is 6 units from the axis. Compare the two contact-circle radii.</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance route 1</span>
+              <h3>Meridian-section tangency</h3>
+              <p>Slice through the rotation axis. The three-dimensional contact becomes tangency between circles of radii $3$ and $11$, whose center distances are $8$ and $14$.</p>
+              <div><i>2D reduction</i><i>circle tangency</i><i>similarity</i></div>
+            </article>
+            <div class="case-study__vs">versus</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance route 2</span>
+              <h3>Implicit-surface normals</h3>
+              <p>Keep the torus and sphere as implicit surfaces in cylindrical coordinates. Collinear normals at tangency reduce the problem to $\rho/|\rho-6|=11/3$.</p>
+              <div><i>3D implicit geometry</i><i>surface normals</i><i>elimination</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>Result.</b> Both derivations give $r_i=33/4$ and $r_o=33/7$, hence $r_i-r_o=99/28$ and answer $127$. The first changes the dimension of the problem; the second solves the original surfaces through a differential tangency condition.</p>
+        </div>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 Problem 27.</b> A rhombus has vertices on $x^2/20-y^2/24=1$ and diagonals meeting at the origin. Determine the greatest number strictly below $BD^2$ for every such rhombus.</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance route 1</span>
+              <h3>Coordinate elimination</h3>
+              <p>Represent opposite vertices by $(a,b)$ and $(c,d)$, use perpendicular diagonals, and eliminate squared coordinates. This yields $BD^2=480+288000/(11a^2-720)$.</p>
+              <div><i>squared variables</i><i>orthogonality</i><i>algebraic bound</i></div>
+            </article>
+            <div class="case-study__vs">versus</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance route 2</span>
+              <h3>Secant–tangent parameterization</h3>
+              <p>Parameterize the hyperbola by $(2\sqrt5\sec\theta,2\sqrt6\tan\theta)$. Perpendicularity becomes $\sin\theta\sin\phi=-5/6$, which bounds $\tan^2\phi$.</p>
+              <div><i>conic parameterization</i><i>trigonometric product</i><i>limit</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>Result.</b> Both routes prove $BD^2&gt;480$ and show that values approach $480$ from above, so the requested number is $480$. Direct elimination and a parameterized conic argument reach the same sharp limit through different invariants.</p>
+        </div>
+
+        <aside class="scope-note"><b>What the cases establish.</b> The diversity increase is not explained by longer answers, altered notation, or stylistic paraphrase: the successful traces change the mathematical representation or criterion that carries the proof. The diagnostic is intentionally scoped to one checkpoint and seed, so it is qualitative evidence rather than a population-level diversity guarantee.</aside>
 
       </section>
 

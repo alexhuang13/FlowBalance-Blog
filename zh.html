@@ -94,8 +94,8 @@
               <article class="motivation-visual__opportunity"><span>FlowBalance</span><b>用验证器校准稠密塑形</b><p>把结果优势与逐 token 教师证据合成为轨迹能量，再归一化为完整回答上的目标分布。</p></article>
             </div>
             <figure class="motivation-figure paper-overview-inline">
-              <a class="motivation-figure__link" href="figures/paper/overview.pdf" target="_blank" rel="noopener"><img src="figures/overview.png" alt="FlowBalance 使用验证器优势和符号门控的特权教师增益，对成功与失败的推理模式进行重新加权。" /></a>
-              <figcaption><b>分布重加权。</b> 教师支持会强化正优势轨迹，并在负优势轨迹上反向，从而提升成功模式的概率，同时保留多种有效解法。</figcaption>
+              <a class="motivation-figure__link" href="figures/paper/overview.pdf" target="_blank" rel="noopener"><img src="figures/overview.png" alt="FlowBalance 的五阶段自我改进循环：在策略采样、结果验证、特权自指导、符号门控与轨迹平衡学习。" /></a>
+              <figcaption><b>FlowBalance 自我改进循环。</b> 在策略经验先由验证器评估，再由冻结的特权视角重新审视；符号门控使稠密指导服从验证结果，带剖面的轨迹平衡最终把目标内化为完整回答上的归一化分布。</figcaption>
             </figure>
           </div>
 
@@ -278,7 +278,7 @@
       <section class="section" id="results">
         <p class="section__label">第五部分</p>
         <h2>实验</h2>
-        <p>在 Qwen3-4B 和 Qwen3-8B 上，FlowBalance 都取得了最高的五项基准平均分。训练曲线还显示，FlowBalance 收敛更快，并呈现出不同于直接在策略自蒸馏的回答长度变化。</p>
+        <p>在 Qwen3-4B 和 Qwen3-8B 上，FlowBalance 都取得了最高的五项基准平均分。Qwen3-4B 的平均分为 64.26，分别比 <strong>GRPO 高 1.95 分</strong>、比 <strong>OPSD 高 10.14 分</strong>；Qwen3-8B 的平均分为 67.61，分别高出 <strong>2.12 分</strong>和 <strong>26.45 分</strong>。训练曲线还显示，FlowBalance 比 GRPO 收敛更快、更稳定，并避免了直接 OPSD 的回答长度塌缩。</p>
 
         <div class="paper-results paper-results--three">
           <figure><a href="figures/paper/training_acceleration.pdf" target="_blank" rel="noopener"><img src="figures/training_acceleration.png" alt="FlowBalance 比 GRPO 更快达到 0.5 的 AIME24 验证准确率。" /></a><figcaption><b>训练加速。</b> FlowBalance 约 100 步达到 0.5，GRPO 约需 143 步，速度提升 1.43×。</figcaption></figure>
@@ -286,8 +286,8 @@
           <figure><a href="figures/paper/response_length.pdf" target="_blank" rel="noopener"><img src="figures/response_length.png" alt="FlowBalance 比直接 OPSD 保持更长的推理回答。" /></a><figcaption><b>回答长度。</b> FlowBalance 保持较长推理轨迹，而直接 OPSD 很快塌缩为短回答。</figcaption></figure>
         </div>
         <div class="result-highlights">
-          <article><span>Qwen3-4B</span><b>64.26</b><p>五基准平均分最高；比 FlowRL 高 1.04。</p></article>
-          <article><span>Qwen3-8B</span><b>67.61</b><p>所有报告基准均为最高；比 FlowRL 高 1.76。</p></article>
+          <article><span>Qwen3-4B · 提升</span><b class="delta-pair">+1.95 · +10.14</b><p>相对 GRPO · OPSD 的五基准平均分提升（总平均分 64.26）。</p></article>
+          <article><span>Qwen3-8B · 提升</span><b class="delta-pair">+2.12 · +26.45</b><p>相对 GRPO · OPSD 的五基准平均分提升（总平均分 67.61）。</p></article>
           <article><span>AIME24 速度</span><b>1.43×</b><p>约 100 步达到 0.5 验证准确率，GRPO 约需 143 步。</p></article>
         </div>
         <div class="benchmark-details">
@@ -330,6 +330,8 @@
           <figcaption><b>正确策略多样性。</b> FlowBalance 达到 0.2194，高于 GRPO 的 0.1017 和 RLSD 的 0.1456。</figcaption>
         </figure>
 
+        <p class="case-intro">汇总指标说明 FlowBalance 能采样到更多样的正确策略；下面的轨迹进一步展示这种差异在数学上究竟意味着什么。这里按照论文方框标出的关键步骤，概括真正支撑每条推导的表示与判据。</p>
+
         <h3 class="subhead">案例分析：用不同数学对象得到同一个答案</h3>
         <div class="case-study">
           <p class="case-study__problem"><b>AIME24 第 23 题。</b> 一个四面体的三组对边长度分别为 $\sqrt{41}$、$\sqrt{80}$ 和 $\sqrt{89}$，求其内切球半径表达式。</p>
@@ -348,8 +350,73 @@
               <div><i>坐标嵌入</i><i>勾股结构</i><i>三重积</i></div>
             </article>
           </div>
-          <p class="case-study__point">两条轨迹都能得到正确答案；行列式与长方体嵌入这两种不同路径，体现了 FlowBalance 在成功策略上的更高多样性。</p>
+          <p class="case-study__point"><b>结果。</b> 两条路线都得到面面积 $24\sqrt{21}$、体积 $160/3$、内切球半径 $20\sqrt{21}/63$，最终答案为 $104$。差异在于解题结构：前者把四面体视为六条距离，后者发现了一个让这些距离一目了然的坐标对象。</p>
         </div>
+
+        <h3 class="subhead">另外三个 FlowBalance 案例</h3>
+        <p class="case-intro">这些案例来自同一次 seed-0、step-180、每题 16 次采样的 AIME24 实验。每一对轨迹的最终答案一致，但核心数学对象不同。</p>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 第 5 题。</b> 一条单位长度线段连接两条正坐标轴。求给定线段上不属于该族其他线段的唯一内点，并计算 $OC^2$。</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance 路线 1</span>
+              <h3>包络线与星形线</h3>
+              <p>把单位截距线族写成 $F(x,y,u)=x/u+y/\sqrt{1-u^2}-1$。联立 $F=F_u=0$ 得到包络线 $x^{2/3}+y^{2/3}=1$；题目给定线段对应 $u=1/2$。</p>
+              <div><i>直线包络</i><i>星形线</i><i>整体几何</i></div>
+            </article>
+            <div class="case-study__vs">对比</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance 路线 2</span>
+              <h3>重根唯一性</h3>
+              <p>参数化线段上的点，并要求已知直线成为一元三角关联方程的二重根。导数条件直接给出 $t=3/4$。</p>
+              <div><i>根的重数</i><i>局部判据</i><i>三角方程</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>结果。</b> 两条路线都得到 $C=(1/8,3\sqrt3/8)$，因此 $OC^2=7/16$，答案为 $23$。一条路线使用整个直线族的全局包络，另一条则通过重根在局部识别唯一性。</p>
+        </div>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 第 15 题。</b> 半径为 11 的球与一个环面相切；该环面由半径为 3、圆心距旋转轴 6 的圆旋转而成。比较两条接触圆的半径。</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance 路线 1</span>
+              <h3>子午截面相切</h3>
+              <p>取经过旋转轴的平面，把三维接触降为半径 $3$ 与 $11$ 的两个圆相切；两种相切情形的圆心距分别为 $8$ 与 $14$。</p>
+              <div><i>二维降维</i><i>圆相切</i><i>相似关系</i></div>
+            </article>
+            <div class="case-study__vs">对比</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance 路线 2</span>
+              <h3>隐式曲面法向量</h3>
+              <p>在柱坐标中保留环面与球面的隐式方程。相切处法向量共线，把问题化为 $\rho/|\rho-6|=11/3$。</p>
+              <div><i>三维隐式几何</i><i>曲面法向量</i><i>消元</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>结果。</b> 两种推导都得到 $r_i=33/4$、$r_o=33/7$，所以 $r_i-r_o=99/28$，答案为 $127$。前者改变问题维度，后者则用微分相切条件直接处理原始曲面。</p>
+        </div>
+
+        <div class="case-study">
+          <p class="case-study__problem"><b>AIME24 第 27 题。</b> 一个菱形的四个顶点位于双曲线 $x^2/20-y^2/24=1$ 上，对角线交于原点。求对所有此类菱形都严格小于 $BD^2$ 的最大实数。</p>
+          <div class="case-study__routes">
+            <article>
+              <span>FlowBalance 路线 1</span>
+              <h3>坐标消元</h3>
+              <p>用 $(a,b)$ 与 $(c,d)$ 表示两组对顶点，利用对角线垂直并对平方坐标消元，得到 $BD^2=480+288000/(11a^2-720)$。</p>
+              <div><i>平方变量</i><i>正交条件</i><i>代数下界</i></div>
+            </article>
+            <div class="case-study__vs">对比</div>
+            <article class="case-study__flowbalance">
+              <span>FlowBalance 路线 2</span>
+              <h3>正割—正切参数化</h3>
+              <p>将双曲线参数化为 $(2\sqrt5\sec\theta,2\sqrt6\tan\theta)$。对角线垂直化为 $\sin\theta\sin\phi=-5/6$，从而约束 $\tan^2\phi$。</p>
+              <div><i>圆锥曲线参数化</i><i>三角乘积</i><i>极限</i></div>
+            </article>
+          </div>
+          <p class="case-study__point"><b>结果。</b> 两条路线都证明 $BD^2&gt;480$，并说明其数值可从上方趋近 $480$，所以所求为 $480$。直接消元与参数化圆锥曲线通过不同不变量得到同一个锐利下界。</p>
+        </div>
+
+        <aside class="scope-note"><b>这些案例说明什么。</b> 多样性的提升不能用回答更长、记号变化或措辞改写来解释：正确轨迹真正改变了支撑证明的数学表示或判据。该诊断只覆盖一个 checkpoint 和一个 seed，因此它提供的是定性证据，而非总体层面的多样性保证。</aside>
 
       </section>
 
