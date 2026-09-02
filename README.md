@@ -1,6 +1,6 @@
 # FlowBalance Blog
 
-Bilingual research blog for **FlowBalance: A Dense-Supervision-Motivated Trajectory Balance Method for LLM Reasoning**.
+Bilingual research blog for **FlowBalance: Verifier-Grounded Self-Improvement from On-Policy Reasoning Experience**.
 
 FlowBalance combines verifier-derived group advantages with sign-gated privileged-teacher gains, then learns the resulting reference-supported distribution over complete responses with profiled trajectory balance.
 
